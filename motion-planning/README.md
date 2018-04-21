@@ -7,7 +7,7 @@ This file contains four sections:
 1. Task 1: Provide a Writeup / README.
 2. Task 2: Explain the Starter Code. 
 3. Task 3: Implementing Your Path Planning Algorithm.
-4. BONUS: 
+4. BONUS IMPLEMENTATIONS: Playing with deadzones, playing with heading, Medial Axis, Voronoi, Probabilistic Roadmap
 ___
 
 ## **Task 2:** Explain the Starter Code.

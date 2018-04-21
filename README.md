@@ -222,10 +222,10 @@ After pruning using ray tracing (Bresenham):
 Number of waypoints (Bresenham pruning):  13
 
 Second starting position:
-![Second path](./second_path.png)
+![Second path: From Embarcadero](./embarcadero_route.png)
 
 Third starting position:
-![Third path](./second_path.png)
+![Third path: From South Neighborhood](./south_route.png)
 
 
 ## **BONUS IMPLEMENTATIONS** 

@@ -286,11 +286,18 @@ path, _ = a_star(invert(skeleton).astype(np.int), heuristic, skel_start, skel_go
 ```
 
 Test configuration:
-Local Start and Goal:  (315, 445) (566, 120)
-Skel Start and Goal:  (315, 445) (558, 128)
+Global home: (-122.39745, 37.79248, 0.0).
+Global position: (-122.3974483, 37.7924799, 0.001).
+Local position: (-0.0012076348066329956, 0.14484423398971558, -0.001501128077507019).
+North offset = -316.
+East offset = -445.
+Grid Start: (315, 445).
+Grid Goal: (566, 120).
+Skel Start: (315, 445).
+Skel Goal: (558, 128).
 Found a path.
-Number of waypoints (Bresenham pruning):  524
-Number of waypoints (Bresenham pruning):  7
+Number of waypoints before pruning: 524.
+After Bresenham pruning: 7.
 
 Medial Axis skeleton on grid and planned path:
 ![Medial Axis](./images/medial_axis_path.png)
@@ -303,15 +310,34 @@ To check this implementation out, instead of `motion_planning.py`, try `motion_p
 
 These lines are added in `plan_path` function.
 ```
+grid, edges, north_offset, east_offset = create_grid_and_edges(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+graph = create_voronoi_graph(edges)
 
+start = local_position
+grid_start = (int(start[0] - north_offset), int(start[1] - east_offset))
+
+goal_lat = 37.794760
+goal_lon = -122.401120
+goal = global_to_local((goal_lon, goal_lat, 0), self.global_home)
+grid_goal = (int(goal[0] - north_offset), int(goal[1] - east_offset))
+
+graph_start, graph_goal = find_start_goal(graph, grid_start, grid_goal)
+path, _ = a_star(graph, heuristic, graph_start, graph_goal)
 ```
 
 Test configuration:
-Local Start and Goal:  (315, 445) (566, 120)
-Skel Start and Goal:  (315, 445) (558, 128)
+Global home: (-122.3974533, 37.7924804, 0.0).
+Global position: (-122.39745, 37.792479, 0.024).
+Local position: (-0.15377381443977356, 0.2881147265434265, -0.024175215512514114).
+North offset = -316.
+East offset = -445.
+Grid Start: (315, 445).
+Grid Goal: (566, 120).
+Graph Start: (315.76114, 445.76846).
+Graph Goal: (560.7610999999999, 130.76850000000002).
 Found a path.
-Number of waypoints (Bresenham pruning):  524
-Number of waypoints (Bresenham pruning):  7
+Number of waypoints before pruning: 52.
+After Bresenham pruning: 8.
 
 Voronoi graph and planned path:
 ![Voronoi](./images/voronoi.png)

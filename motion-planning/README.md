@@ -360,3 +360,31 @@ Voronoi graph and planned path after being pruned:
 ### Representation: Probabilistic Roadmap Graph
 To check this implementation out, instead of `motion_planning.py`, try `motion_planning_rsampling.py`.
 
+These lines are added in `plan_path` function.
+```
+
+```
+Prints on console for test configuration:
+```
+Global home: (-122.39745, 37.79248, 0.0).
+Global position: (-122.3974511, 37.7924796, -0.019).
+Local position: (-0.03972350433468819, -0.09788312762975693, 0.019598715007305145).
+North offset = -316.
+East offset = -445.
+Grid Start: (315, 444, 5).
+Grid Goal: (566, 120, 5).
+Generated 140 / 200 samples so far
+Generated 183 / 200 samples so far
+Generated 193 / 200 samples so far
+Generated 198 / 200 samples so far
+Generated 200 / 200 samples so far
+Number of nodes: 200.
+Max number of edges per node: 10.
+Graph Start: (287, 446, 6.208723009096124).
+Graph Goal: (567, 120, 5.289101735346839).
+Found a path.
+Path: [(-0.04500405536964536, -0.09656390140298754, 5), (-28.537348617635132, 1.75240810447076, 6.208723009096124), (59.7473236992779, -2.8256173266967153, 8.73485667727002), (139.99117880511096, -65.74029960974826, 9.687161965279437), (130.3167590317591, -162.75795670713052, 8.95070053154198), (87.7451164096725, -275.91196171610443, 6.162469413438005), (179.20587578687815, -300.1736065571356, 8.553345748298783), (290.46385991636674, -308.937895445065, 7.8072570205953955), (250.88918597903103, -324.74694366264157, 5)]
+```
+Probabilistic Roadmap graph with 200 nodes and planned path:
+
+![Probabilistic Roadmap](./images/prob_roadmap.png)

@@ -211,21 +211,26 @@ North offset = -316, east offset = -445
 Local Start and Goal in Grid:  (315, 445) (566, 120)
 
 Here's a picture of my planned path before pruning:
+
 ![Planned path](./images/planned_path.png)
 Number of waypoints:  469
 
 After pruning using collinearity:
+
 ![Pruned planned path](./images/pruned_planned_path.png)
 Number of waypoints (collinear pruning):  27
 
 After pruning using ray tracing (Bresenham):
+
 ![Bresenham pruned planned path](./images/bres_pruned_planned_path.png)
 Number of waypoints (Bresenham pruning):  13
 
 Second starting position:
+
 ![Second path: From Embarcadero](./images/embarcadero_route.png)
 
 Third starting position:
+
 ![Third path: From South Neighborhood](./images/south_route.png)
 
 

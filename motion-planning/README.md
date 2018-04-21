@@ -199,6 +199,7 @@ def bresenham_prune_path(grid, path):
            i += 1
    return pruned_path
 ```
+P.S. Thanks to Mike Hahn in Slack forum I find out about the use of function `all()`.
 
 ### 7. Execute the flight
 
@@ -285,7 +286,8 @@ skel_start, skel_goal = find_start_goal(skeleton, grid_start, grid_goal)
 path, _ = a_star(invert(skeleton).astype(np.int), heuristic, skel_start, skel_goal)
 ```
 
-Test configuration:
+Prints on console for test configuration:
+```
 Global home: (-122.39745, 37.79248, 0.0).
 Global position: (-122.3974483, 37.7924799, 0.001).
 Local position: (-0.0012076348066329956, 0.14484423398971558, -0.001501128077507019).
@@ -298,11 +300,13 @@ Skel Goal: (558, 128).
 Found a path.
 Number of waypoints before pruning: 524.
 After Bresenham pruning: 7.
-
+```
 Medial Axis skeleton on grid and planned path:
+
 ![Medial Axis](./images/medial_axis_path.png)
 
 Medial Axis skeleton on grid and planned path after being pruned:
+
 ![Pruned Medial Axis](./images/medial_axis_pruned_path.png)
 
 ### Representation: Voronoi Graph
@@ -324,8 +328,8 @@ grid_goal = (int(goal[0] - north_offset), int(goal[1] - east_offset))
 graph_start, graph_goal = find_start_goal(graph, grid_start, grid_goal)
 path, _ = a_star(graph, heuristic, graph_start, graph_goal)
 ```
-
-Test configuration:
+Prints on console for test configuration:
+```
 Global home: (-122.3974533, 37.7924804, 0.0).
 Global position: (-122.39745, 37.792479, 0.024).
 Local position: (-0.15377381443977356, 0.2881147265434265, -0.024175215512514114).
@@ -338,11 +342,14 @@ Graph Goal: (560.7610999999999, 130.76850000000002).
 Found a path.
 Number of waypoints before pruning: 52.
 After Bresenham pruning: 8.
+```
 
 Voronoi graph and planned path:
+
 ![Voronoi](./images/voronoi.png)
 
 Voronoi graph and planned path after being pruned:
+
 ![Pruned Voronoi](./images/pruned_voronoi.png)
 
 ### Representation: Probabilistic Roadmap Graph

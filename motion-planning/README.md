@@ -292,14 +292,32 @@ Found a path.
 Number of waypoints (Bresenham pruning):  524
 Number of waypoints (Bresenham pruning):  7
 
-Second starting position:
-![Second path](./images/medial_axis_path.png)
+Medial Axis skeleton on grid and planned path:
+![Medial Axis](./images/medial_axis_path.png)
 
-Third starting position:
-![Third path](./images/medial_axis_pruned_path.png)
+Medial Axis skeleton on grid and planned path after being pruned:
+![Pruned Medial Axis](./images/medial_axis_pruned_path.png)
 
 ### Representation: Voronoi Graph
 To check this implementation out, instead of `motion_planning.py`, try `motion_planning_voronoi.py`.
+
+These lines are added in `plan_path` function.
+```
+
+```
+
+Test configuration:
+Local Start and Goal:  (315, 445) (566, 120)
+Skel Start and Goal:  (315, 445) (558, 128)
+Found a path.
+Number of waypoints (Bresenham pruning):  524
+Number of waypoints (Bresenham pruning):  7
+
+Voronoi graph and planned path:
+![Voronoi](./images/voronoi.png)
+
+Voronoi graph and planned path after being pruned:
+![Pruned Voronoi](./images/pruned_voronoi.png)
 
 ### Representation: Probabilistic Roadmap Graph
 To check this implementation out, instead of `motion_planning.py`, try `motion_planning_rsampling.py`.

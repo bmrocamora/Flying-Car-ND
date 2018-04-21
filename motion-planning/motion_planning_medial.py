@@ -125,7 +125,6 @@ class MotionPlanning(Drone):
         with open("colliders.csv") as f:
             lat_str, lon_str = f.readline().split(',')
             lat0, lon0 = float(lat_str.split(' ')[-1]), float(lon_str.split(' ')[-1])
-            print(lat0, lon0)
         
         # DONE: set home position to (lon0, lat0, 0)
         self.set_home_position(lon0, lat0, 0)
@@ -136,13 +135,13 @@ class MotionPlanning(Drone):
         # DONE: convert to current local position using global_to_local()
         local_position = global_to_local(global_position, self.global_home)
         
-        print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
-                                                                         self.local_position))
+        print('Global home: {0}.\nGlobal position: {1}.\nLocal position: {2}.'.format(tuple(self.global_home), tuple(self.global_position),
+                                                                         tuple(self.local_position)))
         # Read in obstacle map
         data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
 
         grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
-        print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
+        print("North offset = {0}.\nEast offset = {1}.".format(north_offset, east_offset))
 
         start = local_position
         grid_start = (int(start[0] - north_offset), int(start[1] - east_offset))
@@ -150,23 +149,23 @@ class MotionPlanning(Drone):
         goal_lat = 37.794760
         goal_lon = -122.401120
 
+        # DONE: Try a different approach altogether! 
+
         goal = global_to_local((goal_lon, goal_lat, 0), self.global_home)
         grid_goal = (int(goal[0] - north_offset), int(goal[1] - east_offset))
 
         skeleton = create_skeleton(grid)
         
-        print('Local Start and Goal: ', grid_start, grid_goal)
+        print('Grid Start: {0}.\nGrid Goal: {1}.'.format(grid_start, grid_goal))
 
         skel_start, skel_goal = find_start_goal(skeleton, grid_start, grid_goal)
-
-        print('Skel Start and Goal: ', skel_start, skel_goal)
+        print('Skel Start: {0}.\nSkel Goal: {1}.'.format(skel_start, skel_goal))
         
         path, _ = a_star(invert(skeleton).astype(np.int), heuristic, skel_start, skel_goal)
 
         path.insert(0, grid_start)
         path.append(grid_goal)
         
-#        print('Number of waypoints (Bresenham pruning): ', len(path))
 #        plt.figure()
 #        plt.imshow(grid, cmap='Greys', origin='lower')
 #        plt.imshow(skeleton, cmap='Greys', origin='lower', alpha=0.7)
@@ -183,7 +182,6 @@ class MotionPlanning(Drone):
         
         pruned_path = bresenham_prune_path(grid, path)
         
-#        print('Number of waypoints (Bresenham pruning): ', len(pruned_path))
 #        plt.figure()
 #        plt.imshow(grid, cmap='Greys', origin='lower')
 #        plt.imshow(skeleton, cmap='Greys', origin='lower', alpha=0.7)
@@ -198,6 +196,7 @@ class MotionPlanning(Drone):
 #        plt.scatter(pp[:, 1], pp[:, 0])
 #        plt.show()
 
+        print('Number of waypoints before pruning: {0}.\nAfter Bresenham pruning: {1}.'.format(len(path),len(pruned_path)))
         
         # Convert path to waypoints
         waypoints = [[int(p[0] + north_offset), int(p[1] + east_offset), int(TARGET_ALTITUDE), int(0)] for p in pruned_path]

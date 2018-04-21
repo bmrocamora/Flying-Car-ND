@@ -126,7 +126,6 @@ class MotionPlanning(Drone):
         with open("colliders.csv") as f:
             lat_str, lon_str = f.readline().split(',')
             lat0, lon0 = float(lat_str.split(' ')[-1]), float(lon_str.split(' ')[-1])
-            print(lat0, lon0)
         
         # DONE: set home position to (lon0, lat0, 0)
         self.set_home_position(lon0, lat0, 0)
@@ -137,45 +136,36 @@ class MotionPlanning(Drone):
         # DONE: convert to current local position using global_to_local()
         local_position = global_to_local(global_position, self.global_home)
         
-        print(global_position)
-        print(local_position)
-        print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
-                                                                         self.local_position))
+        print('Global home: {0}.\nGlobal position: {1}.\nLocal position: {2}.'.format(tuple(self.global_home), tuple(self.global_position),
+                                                                         tuple(self.local_position)))
         # Read in obstacle map
         data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
         
         # Define a grid for a particular altitude and safety margin around obstacles
-        
         grid, edges, north_offset, east_offset = create_grid_and_edges(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
         graph = create_voronoi_graph(edges)
        
-        print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
-        # Define starting point on the grid (this is just grid center)
-        # grid_start = (-north_offset, -east_offset)
-        # DONE: convert start position to current position rather than map center
+        print("North offset = {0}.\nEast offset = {1}.".format(north_offset, east_offset))
+
         start = local_position
         grid_start = (int(start[0] - north_offset), int(start[1] - east_offset))
 
-        # Set goal as some arbitrary position on the grid
-        # grid_goal = (-north_offset + 10, -east_offset + 10)
         # DONE: adapt to set goal as latitude / longitude position and convert
         goal_lat = 37.794760
         goal_lon = -122.401120
 
+        # DONE: Try a different approach altogether! 
+        
         goal = global_to_local((goal_lon, goal_lat, 0), self.global_home)
         grid_goal = (int(goal[0] - north_offset), int(goal[1] - east_offset))
 
-        # Run A* to find a path from start to goal
-        # DONE: add diagonal motions with a cost of sqrt(2) to your A* implementation
-        # or move to a different search space such as a graph (not done here)
-        print('Local Start and Goal: ', grid_start, grid_goal)
+        print('Grid Start: {0}.\nGrid Goal: {1}.'.format(grid_start, grid_goal))
         
         graph_start, graph_goal = find_start_goal(graph, grid_start, grid_goal)
-        print('Local Graph Start and Goal: ', graph_start, graph_goal)
+        
+        print('Graph Start: {0}.\nGraph Goal: {1}.'.format(graph_start, graph_goal))
         
         path, _ = a_star(graph, heuristic, graph_start, graph_goal)
-        
-        print(path)
         
         path.insert(0, grid_start)
         path.append(grid_goal)
@@ -213,6 +203,8 @@ class MotionPlanning(Drone):
 #        plt.xlabel('EAST')
 #        plt.ylabel('NORTH')
 #        plt.show()
+        
+        print('Number of waypoints before pruning: {0}.\nAfter Bresenham pruning: {1}.'.format(len(path),len(pruned_path)))
         
         # Convert path to waypoints
         waypoints = [[int(p[0] + north_offset), int(p[1] + east_offset), int(TARGET_ALTITUDE), int(0)] for p in pruned_path]

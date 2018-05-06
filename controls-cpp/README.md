@@ -3,9 +3,9 @@ ___
 ## **Task 1:** Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  
 You're reading it! Below I describe how I addressed each rubric point and where in my code each point is handled.
 This file contains four sections:
-1. Task 1: Provide a Writeup / README.
-2. Task 2: . 
-3. Task 3: .
+1. Task 1: Provide a Writeup / README (done).
+2. Task 2: Rebuilding Controler into C++ and Tuning (done).
+3. Task 3: Extra challenges (partially done).
 ___
 ## **Task 2:** Rebuilding Python Controller into C++
 
@@ -49,7 +49,6 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
 }
 ```
 
-
 #### Function `BodyRateControl()`
 
 The body rate control function takes as input the commanded body rates and estimated actual body rates and using a P controller outputs the target rates of change for these body rates. And multiplicating these rates for the proper moments of inertia, one can have the target moments that will be fed to `GenerateMotorCommands()` function.
@@ -69,9 +68,9 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
 }
 ```
 
-#### Tune parameter `Kp_pqr` 
+#### Tune parameter `kpPQR` 
 
-
+Starting from `kpPQR = 23, 23, 5`, I increased it by three times, making `kpPQR = 70, 70, 15`. Almost got the two passes. I increased the p and q terms a little bit more (`kpPQR = 80, 80, 15`), and it worked.
 
 ### **2.2:** Implement body rate control.
 
@@ -117,9 +116,9 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
 }
 ```
 
-#### Tune parameter `Kp_bank`
+#### Tune parameter `kpBank`
 
-
+Starting from `kpBank = 20`, in order to have Kp_bank around 4 times less than kpPQR.
 
 ### **2.3:** Position/velocity and yaw angle control
 
@@ -178,9 +177,12 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
 }
 ```
 
-#### Tune parameters `Kp_pos_z` and `Kp_vel_z`
+#### Tune parameters `kpPosZ` and `kpVelZ`
+I implemented altitude and x-y position controllers as proportional-dampening controllers. Therefore, kd = 2*\delta* \omega_n and kp = \omega_n ** 2. For Scenario 3, altitude controller doesn't play great part of the job. For altitude position controller, I chose increased KpPosZ to be 64 (omega_n = 8) and KpVelZ to be 16 (delta = 1).
 
-#### Tune parameters `Kp_vel_xy` and `Kp_vel_z`
+#### Tune parameters `kpPosXY` and `kpVelXY`
+For x-y position controllers, I chose increased KpPosXY to be 16 (omega_n = 4) and KpVelXY to be 6 (delta = 0.75).
+
 
 #### Function `YawControl()`
 
@@ -210,9 +212,9 @@ float QuadControl::YawControl(float yawCmd, float yaw)
 
 ```
 
-#### Tune parameters `Kp_yaw` and the 3rd (z) component of `Kp_pqr`
+#### Tune parameters `kpYaw` and the 3rd (z) component of `kpPQR`
 
-
+I was almost passing Scenario 3 and, for KpYaw I made it (as in KpBank), one fourth of the KpPQR that I had already increased before. First try for `KpYaw = 4`. Then I relaxed `KpYaw` a little bit and set it to `KpYaw = 3`, achieving PASS in Scenario 3.
 
 ### **2.4:** Non-idealities and robustness
 
@@ -248,15 +250,38 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
 }
 ```
 
+#### Tune parameter `kiPosZ`
+For Scenario 4, I implemented KiPosZ. I had to set both the gain value and also the constraining threshold. I first increased the gain to 100. And almost got a pass in this scenario. From trial and error I got to the value of `maxIntegratedAltitudeError = 0.035f`. With this, Sceneario 5 was almost in PASS condition as well. Fine tuning was needed.
+
 ### **2.5:** Tracking trajectories
+#### Scenario 5
+Cool to see that FF really reduces delay in trajectory following.
 
 #### Fine Tune
+After a lot of manual Coordinate descent, i.e. keeping all but one variables constant and changing still best performance, I was able to obtain the following parameters that were capable of passing all the scenarios.
 
+```
+# Position control gains
+kpPosXY = 24
+kpPosZ = 60
+KiPosZ = 60
 
+# Velocity control gains
+kpVelXY = 9
+kpVelZ = 25
+
+# Angle control gains
+kpBank = 17.0
+kpYaw = 3.0
+
+# Angle rate gains
+kpPQR = 80.0, 80.0, 8.0
+```
 ___
 ## **Task 3:** Extra Challenges
 
 ### **Extra Challenge 1:** Improving trajectory generation with target velocities.
+To make target velocities appear in trajectory file, it was just necessary to put extra line calculating velocity as v[i]=(x[i] - x[i-1])/dt.
 
 ```
 import math;
@@ -300,4 +325,4 @@ with open('FigureEight.txt', 'w') as the_file:
 ```
 
 ### **Extra Challenge 2:** Improving trajectory generation with minimum snap trajectories.
-
+Next step is to generate trajectories using minimum snap optimization.

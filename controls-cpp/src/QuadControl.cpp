@@ -19,8 +19,6 @@ void QuadControl::Init()
 
   // variables needed for integral control
   integratedAltitudeError = 0;
-//  integratedXError = 0;
-//  integratedYError = 0;
 
 #ifndef __PX4_NUTTX
   // Load params from simulator parameter system
@@ -73,19 +71,21 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
-  float Fc = collThrustCmd; // [N]
-  float Mx = momentCmd.x; // [Nm]
+  // Gets collective thrust and moments from controller
+  float Fc = collThrustCmd; // [N]  float Mx = momentCmd.x; // [Nm]
   float My = momentCmd.y; // [Nm]
   float Mz = momentCmd.z; // [Nm]
 
-  // Solve:
+  // Solve Ax=b:
   // [1  1  1  1][F1]   [ Fc ]       k_m (drag)            L
   // [1 -1 -1  1][F2] = [Mx/l], K = ------------ , l = ---------
   // [1  1 -1 -1][F3]   [My/l]       k_f (lift)         sqrt(2)
   // [1 -1  1 -1][F4]   [Mz/K]
 
+  // Distance to axes of inertia
   float l = L / sqrt(2); // [m], 45deg angle
 
+  // Solution to linear system above (x = inv(A)*b):
   float f1 = (Fc + Mx/l + My/l + Mz/(-kappa)) / 4; // [N]
   float f2 = (Fc - Mx/l + My/l - Mz/(-kappa)) / 4; // [N]
   float f3 = (Fc - Mx/l - My/l + Mz/(-kappa)) / 4; // [N]
@@ -93,15 +93,8 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
 
   cmd.desiredThrustsN[0] = f1; // front left
   cmd.desiredThrustsN[1] = f2; // front right
-  cmd.desiredThrustsN[2] = f4; // rear left << REALLY WEIRD
-  cmd.desiredThrustsN[3] = f3; // rear right << REALLY WEIRD
-
-  /*
-  cmd.desiredThrustsN[0] = mass * 9.81f / 4.f; // front left
-  cmd.desiredThrustsN[1] = mass * 9.81f / 4.f; // front right
-  cmd.desiredThrustsN[2] = mass * 9.81f / 4.f; // rear left
-  cmd.desiredThrustsN[3] = mass * 9.81f / 4.f; // rear right
-  */
+  cmd.desiredThrustsN[2] = f4; // rear left
+  cmd.desiredThrustsN[3] = f3; // rear right
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -126,8 +119,10 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  // Calculates P, Q, R errors
   V3F pqr_error = pqrCmd - pqr;
 
+  // P Controller and calculates target moments using moments of inertia
   momentCmd[0] = Ixx * kpPQR.x * pqr_error.x;
   momentCmd[1] = Iyy * kpPQR.y * pqr_error.y;
   momentCmd[2] = Izz * kpPQR.z * pqr_error.z;
@@ -164,22 +159,30 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   V3F bankCmd;
   V3F bankActual;
 
+  // Transforms collective thrust in vertical acceleration
   float accelThrust = collThrustCmd / mass;
 
+  // If collective thrust is greater than zero, proceed. Else, command nul.
   if(collThrustCmd > 0){
+      // Calculates bank angle desired
       bankCmd.x =  accelCmd.x / accelThrust;
       bankCmd.y =  accelCmd.y / accelThrust;
 
+      // Constrain bank angle and invert
       bankCmd.x = - CONSTRAIN(bankCmd.x, -maxTiltAngle, maxTiltAngle);
       bankCmd.y = - CONSTRAIN(bankCmd.y, -maxTiltAngle, maxTiltAngle);
 
+      // Calculates bank angle estimated
       bankActual.x = R(0,2);
       bankActual.y = R(1,2);
 
+      // Calculates bank angle error
       V3F bankError = bankCmd - bankActual;
 
+      // P controller
       V3F bankCmdDot = kpBank * bankError;
 
+      // From body frame to inertial frame coordinates transformation
       pqrCmd.x = (R(1,0) * bankCmdDot.x - R(0,0) * bankCmdDot.y) / R(2,2);
       pqrCmd.y = (R(1,1) * bankCmdDot.x - R(0,1) * bankCmdDot.y) / R(2,2);
 
@@ -218,30 +221,33 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   float thrust = 0;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-
+  // Error in altitude
   float posZerror = posZCmd - posZ;
 
+  // Constrain desired ascend/descend rate
   velZCmd = CONSTRAIN(velZCmd, -maxDescentRate, maxAscentRate);
 
+  // Error in ascend/descend rate
   float velZerror = velZCmd - velZ;
 
+  // Iterates integrated altitude error
   integratedAltitudeError += posZerror * dt;
 
-  //printf("Simulation %f \n", integratedAltitudeError);
-
+  // Constrain integrated altitude error
   float maxIntegratedAltitudeError = 0.035f;
-
   integratedAltitudeError = CONSTRAIN(integratedAltitudeError, -maxIntegratedAltitudeError, maxIntegratedAltitudeError);
 
-
+  // PID-FF Controller
   float uBar1 = kpPosZ * posZerror + kpVelZ * velZerror + accelZCmd + KiPosZ * integratedAltitudeError;
 
+  // Accounts for gravity and transforms from body frame to inertial frame coordinates
   float thrustAcc = (uBar1 - 9.81f) / R(2,2);
 
-  thrust = thrustAcc * mass;
+  // Newton's 2nd Law and adjustment to simulator coordinates
+  thrust = - thrustAcc * mass;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
   
-  return - thrust;
+  return thrust;
 }
 
 // returns a desired acceleration in global frame
@@ -270,17 +276,21 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
   posCmd.z = pos.z;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-
+  // Error in x-y position
   V3F posError = posCmd - pos;
 
+  // Constrain desired velocity
   velCmd.x = CONSTRAIN(velCmd.x, -maxSpeedXY, maxSpeedXY);
   velCmd.y = CONSTRAIN(velCmd.y, -maxSpeedXY, maxSpeedXY);
 
+  // Error in velocity
   V3F velError = velCmd - vel;
 
+  // PD-FF Controller
   accelCmd.x = kpPosXY * posError.x + kpVelXY * velError.x + accelCmd.x;
   accelCmd.y = kpPosXY * posError.y + kpVelXY * velError.y + accelCmd.y;
 
+  // Constrain lateral acceleration command
   accelCmd.x = CONSTRAIN(accelCmd.x, -maxAccelXY, maxAccelXY);
   accelCmd.y = CONSTRAIN(accelCmd.y, -maxAccelXY, maxAccelXY);
 
@@ -305,9 +315,13 @@ float QuadControl::YawControl(float yawCmd, float yaw)
   float yawRateCmd=0;
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  // Constrain desired yaw to [0, 2*pi] interval
   yawCmd = fmod(yawCmd, (2.0*M_PI));
+
+  // Calculates yaw error
   float yawError = yawCmd - yaw;
 
+  // Corrects yaw error to make minium yaw turn
   if (yawError <= -M_PI)
   {
      yawError += (2.0*M_PI);
@@ -317,6 +331,7 @@ float QuadControl::YawControl(float yawCmd, float yaw)
      yawError -= (2.0*M_PI);
   }
 
+  // P Controller
   yawRateCmd = kpYaw * yawError;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////

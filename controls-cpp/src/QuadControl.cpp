@@ -72,7 +72,8 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
   // Gets collective thrust and moments from controller
-  float Fc = collThrustCmd; // [N]  float Mx = momentCmd.x; // [Nm]
+  float Fc = collThrustCmd; // [N]  
+  float Mx = momentCmd.x; // [Nm]
   float My = momentCmd.y; // [Nm]
   float Mz = momentCmd.z; // [Nm]
 

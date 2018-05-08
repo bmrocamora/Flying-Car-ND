@@ -46,3 +46,284 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
   cmd.desiredThrustsN[3] = f3; // rear right << REALLY WEIRD
 
   return cmd;
+}
+```
+
+#### Function `BodyRateControl()`
+
+The body rate control function takes as input the commanded body rates and estimated actual body rates and using a P controller outputs the target rates of change for these body rates. And multiplicating these rates for the proper moments of inertia, one can have the target moments that will be fed to `GenerateMotorCommands()` function.
+
+```
+V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
+{
+  V3F momentCmd;
+  
+  V3F pqr_error = pqrCmd - pqr;
+
+  momentCmd[0] = Ixx * kpPQR.x * pqr_error.x;
+  momentCmd[1] = Iyy * kpPQR.y * pqr_error.y;
+  momentCmd[2] = Izz * kpPQR.z * pqr_error.z;
+  
+  return momentCmd;
+}
+```
+
+#### Tune parameter `kpPQR` 
+
+Starting from `kpPQR = 23, 23, 5`, I increased it by three times, making `kpPQR = 70, 70, 15`. Almost got the two passes. I increased the p and q terms a little bit more (`kpPQR = 80, 80, 15`), and it worked.
+
+### **2.2:** Implement body rate control.
+
+#### Function `RollPitchControl()`
+
+This function takes as input the acceleration commands, the collective thrust and attitude of the quad and outputs the target bodyrates that will be fed into `BodyRateControl()` function. To do so, it first transforms the collective thrust into an acceleration by dividing by the vehicle's mass. Then, if thrust is not zero, it calculates the desired bank angle (dividing the acceleration command (`accelCmd`) by the thrust acceleration (`accelThrust`)) and constrains it to [-maxTiltAngle, maxTiltAngle] interval.
+The estimated bank angles are obtained from Rotation matrix and then a P controller is applied to the error in bank angle, leading to target derivates of Euler angles. Later, there is a coordinates transformation, from inertial to vehicle body frame, and target bodyrates are obtained. Finally, if there is no thrust, no command is given.
+
+```
+V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, float collThrustCmd)
+{
+  V3F pqrCmd;
+  Mat3x3F R = attitude.RotationMatrix_IwrtB();
+
+  V3F bankCmd;
+  V3F bankActual;
+
+  float accelThrust = collThrustCmd / mass;
+
+  if(collThrustCmd > 0){
+      bankCmd.x =  accelCmd.x / accelThrust;
+      bankCmd.y =  accelCmd.y / accelThrust;
+
+      bankCmd.x = - CONSTRAIN(bankCmd.x, -maxTiltAngle, maxTiltAngle);
+      bankCmd.y = - CONSTRAIN(bankCmd.y, -maxTiltAngle, maxTiltAngle);
+
+      bankActual.x = R(0,2);
+      bankActual.y = R(1,2);
+
+      V3F bankError = bankCmd - bankActual;
+
+      V3F bankCmdDot = kpBank * bankError;
+
+      pqrCmd.x = (R(1,0) * bankCmdDot.x - R(0,0) * bankCmdDot.y) / R(2,2);
+      pqrCmd.y = (R(1,1) * bankCmdDot.x - R(0,1) * bankCmdDot.y) / R(2,2);
+
+  }
+  else {
+      pqrCmd.x = 0;
+      pqrCmd.y = 0;
+  }
+  return pqrCmd;
+}
+```
+
+#### Tune parameter `kpBank`
+
+Starting from `kpBank = 20`, in order to have Kp_bank around 4 times less than kpPQR.
+
+### **2.3:** Position/velocity and yaw angle control
+
+#### Function `LateralPositionControl()`
+
+Lateral position controller is a PD controller using X and Y position and velocities, and desired feed-forward acceleration. Desired velocity is constrained to interval [-maxSpeedXY, maxSpeedXY] and target acceleration is constrained to interval [-maxAccelXY, maxAccelXY].
+
+```
+V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel, V3F accelCmd)
+{
+  accelCmd.z = 0;
+  velCmd.z = 0;
+  posCmd.z = pos.z;
+
+  V3F posError = posCmd - pos;
+
+  velCmd.x = CONSTRAIN(velCmd.x, -maxSpeedXY, maxSpeedXY);
+  velCmd.y = CONSTRAIN(velCmd.y, -maxSpeedXY, maxSpeedXY);
+
+  V3F velError = velCmd - vel;
+
+  accelCmd.x = kpPosXY * posError.x + kpVelXY * velError.x + accelCmd.x;
+  accelCmd.y = kpPosXY * posError.y + kpVelXY * velError.y + accelCmd.y;
+
+  accelCmd.x = CONSTRAIN(accelCmd.x, -maxAccelXY, maxAccelXY);
+  accelCmd.y = CONSTRAIN(accelCmd.y, -maxAccelXY, maxAccelXY);
+  
+  return accelCmd;
+}
+
+```
+
+#### Function `AltitudeControl()`
+
+Altitude control is first implemented as a FF-PC controller. Target thrust is obtained by calculating the target altitude acceleration, correcting for gravity and transforming to vehicle body frame coordinates.
+
+```
+float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, float velZ, Quaternion<float> attitude, float accelZCmd, float dt)
+{
+  Mat3x3F R = attitude.RotationMatrix_IwrtB();
+  float thrust = 0;
+
+  float posZerror = posZCmd - posZ;
+
+  velZCmd = CONSTRAIN(velZCmd, -maxDescentRate, maxAscentRate);
+
+  float velZerror = velZCmd - velZ;
+
+  float uBar1 = kpPosZ * posZerror + kpVelZ * velZerror + accelZCmd;
+
+  float thrustAcc = (uBar1 - 9.81f) / R(2,2);
+
+  thrust = thrustAcc * mass;
+  
+  return - thrust;
+}
+```
+
+#### Tune parameters `kpPosZ` and `kpVelZ`
+I implemented altitude and x-y position controllers as proportional-dampening controllers. Therefore, kd = 2*\delta* \omega_n and kp = \omega_n ** 2. For Scenario 3, altitude controller doesn't play great part of the job. For altitude position controller, I chose increased KpPosZ to be 64 (omega_n = 8) and KpVelZ to be 16 (delta = 1).
+
+#### Tune parameters `kpPosXY` and `kpVelXY`
+For x-y position controllers, I chose increased KpPosXY to be 16 (omega_n = 4) and KpVelXY to be 6 (delta = 0.75).
+
+
+#### Function `YawControl()`
+
+Yaw control is a simple P controller. The only issue is guaranteeing that the vehicle will rotate the shorter angle to achieve desired heading. This is done by constraining desired yaw from [0, 2*pi], calculating error in yaw angle and if error is lesser than -pi, 2*pi is added, else if it is greater than pi, 2*pi is subtracted.
+
+```
+float QuadControl::YawControl(float yawCmd, float yaw)
+{
+  float yawRateCmd=0;
+
+  yawCmd = fmod(yawCmd, (2.0*M_PI));
+  float yawError = yawCmd - yaw;
+
+  if (yawError <= -M_PI)
+  {
+     yawError += (2.0*M_PI);
+  }
+  else if (yawError > M_PI)
+  {
+     yawError -= (2.0*M_PI);
+  }
+
+  yawRateCmd = kpYaw * yawError;
+
+  return yawRateCmd;
+}
+
+```
+
+#### Tune parameters `kpYaw` and the 3rd (z) component of `kpPQR`
+
+I was almost passing Scenario 3 and, for KpYaw I made it (as in KpBank), one fourth of the KpPQR that I had already increased before. First try for `KpYaw = 4`. Then I relaxed `KpYaw` a little bit and set it to `KpYaw = 3`, achieving PASS in Scenario 3.
+
+### **2.4:** Non-idealities and robustness
+
+#### Add Integral Control in `AltitudeControl()` 
+
+Adding Integral Control is also pretty straight-forward. The error is accumulated by storing the integral in `integratedAltitudeError` variable and it is added to the target command equation. One caveat is that the integrated value can get too high and dominate over other parts of the controllers. Therefore, as seen in PX4 and Crazyflie 2.0 githubs documentations, I added a constraints to the integral value. The value was obtained by trial and error.
+
+```
+float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, float velZ, Quaternion<float> attitude, float accelZCmd, float dt)
+{
+  Mat3x3F R = attitude.RotationMatrix_IwrtB();
+  float thrust = 0;
+
+  float posZerror = posZCmd - posZ;
+
+  velZCmd = CONSTRAIN(velZCmd, -maxDescentRate, maxAscentRate);
+
+  float velZerror = velZCmd - velZ;
+
+  integratedAltitudeError += posZerror * dt;
+
+  float maxIntegratedAltitudeError = 0.035f;
+
+  integratedAltitudeError = CONSTRAIN(integratedAltitudeError, -maxIntegratedAltitudeError, maxIntegratedAltitudeError);
+
+  float uBar1 = kpPosZ * posZerror + kpVelZ * velZerror + accelZCmd + KiPosZ * integratedAltitudeError;
+
+  float thrustAcc = (uBar1 - 9.81f) / R(2,2);
+
+  thrust = thrustAcc * mass;
+  
+  return - thrust;
+}
+```
+
+#### Tune parameter `kiPosZ`
+For Scenario 4, I implemented KiPosZ. I had to set both the gain value and also the constraining threshold. I first increased the gain to 100. And almost got a pass in this scenario. From trial and error I got to the value of `maxIntegratedAltitudeError = 0.035f`. With this, Sceneario 5 was almost in PASS condition as well. Fine tuning was needed.
+
+### **2.5:** Tracking trajectories
+#### Scenario 5
+Cool to see that FF really reduces delay in trajectory following.
+
+#### Fine Tune
+After a lot of manual Coordinate descent, i.e. keeping all but one variables constant and changing still best performance, I was able to obtain the following parameters that were capable of passing all the scenarios.
+
+```
+# Position control gains
+kpPosXY = 24
+kpPosZ = 60
+KiPosZ = 60
+
+# Velocity control gains
+kpVelXY = 9
+kpVelZ = 25
+
+# Angle control gains
+kpBank = 17.0
+kpYaw = 3.0
+
+# Angle rate gains
+kpPQR = 80.0, 80.0, 8.0
+```
+___
+## **Task 3:** Extra Challenges
+
+### **Extra Challenge 1:** Improving trajectory generation with target velocities.
+To make target velocities appear in trajectory file, it was just necessary to put extra line calculating velocity as v[i]=(x[i] - x[i-1])/dt.
+
+```
+import math;
+
+def fmt(value):
+    return "%.3f" % value
+
+period = [4, 2, 4]
+radius = 1.5
+timestep = 0.02
+maxtime = max(period)*3
+timemult = [1, 1, 1]
+phase=[0,0,0]
+amp = [1,0.4,.5]
+center = [0, 0, -2]
+
+with open('FigureEight.txt', 'w') as the_file:
+    t=0;
+    px = 0;
+    py = 0;
+    pz = 0;
+    while t <= maxtime:
+
+        x = math.sin(t * 2 * math.pi / period[0] + phase[0]) * radius * amp[0] + center[0];
+        y = math.sin(t * 2 * math.pi / period[1] + phase[1]) * radius * amp[1] + center[1];
+        z = math.sin(t * 2 * math.pi / period[2] + phase[2]) * radius * amp[2] + center[2];
+        the_file.write(fmt(t) + "," + fmt(x) + "," + fmt(y) + "," + fmt(z));
+
+        vx = (x-px)/timestep;
+        vy = (y-py)/timestep;
+        vz = (z-pz)/timestep;
+        the_file.write("," + fmt(vx) + "," + fmt(vy) + "," + fmt(vz));
+	
+        the_file.write("\n");
+
+        px = x;
+        py = y;
+        pz = z;
+
+        t += timestep;
+```
+
+### **Extra Challenge 2:** Improving trajectory generation with minimum snap trajectories.
+Next step is to generate trajectories using minimum snap optimization.
+  return cmd;

@@ -72,6 +72,12 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
 
 Starting from `kpPQR = 23, 23, 5`, I increased it by three times, making `kpPQR = 70, 70, 15`. Almost got the two passes. I increased the p and q terms a little bit more (`kpPQR = 80, 80, 15`), and it worked.
 
+
+  
+  [![Scenario 1 - Intro](http://img.youtube.com/vi/g9MXIZB3w4s/0.jpg)](https://youtu.be/g9MXIZB3w4s)
+  
+ 
+
 ### **2.2:** Implement body rate control.
 
 #### Function `RollPitchControl()`
@@ -119,6 +125,8 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
 #### Tune parameter `kpBank`
 
 Starting from `kpBank = 20`, in order to have Kp_bank around 4 times less than kpPQR.
+
+[![Scenario 2 - Attitude Control](http://img.youtube.com/vi/MuD2dLZcdU4/0.jpg)](https://youtu.be/MuD2dLZcdU4)
 
 ### **2.3:** Position/velocity and yaw angle control
 
@@ -216,6 +224,8 @@ float QuadControl::YawControl(float yawCmd, float yaw)
 
 I was almost passing Scenario 3 and, for KpYaw I made it (as in KpBank), one fourth of the KpPQR that I had already increased before. First try for `KpYaw = 4`. Then I relaxed `KpYaw` a little bit and set it to `KpYaw = 3`, achieving PASS in Scenario 3.
 
+[![Scenario 3 - Position Control](http://img.youtube.com/vi/I3tlVPEPmEk/0.jpg)](https://youtu.be/I3tlVPEPmEk)
+
 ### **2.4:** Non-idealities and robustness
 
 #### Add Integral Control in `AltitudeControl()` 
@@ -253,9 +263,13 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
 #### Tune parameter `kiPosZ`
 For Scenario 4, I implemented KiPosZ. I had to set both the gain value and also the constraining threshold. I first increased the gain to 100. And almost got a pass in this scenario. From trial and error I got to the value of `maxIntegratedAltitudeError = 0.035f`. With this, Sceneario 5 was almost in PASS condition as well. Fine tuning was needed.
 
+[![Scenario 4 - Nonidealities](http://img.youtube.com/vi/IkP6tFNcI6Q/0.jpg)](https://youtu.be/IkP6tFNcI6Q)
+
 ### **2.5:** Tracking trajectories
 #### Scenario 5
 Cool to see that FF really reduces delay in trajectory following.
+
+[![Scenario 5 - Trajectory Following](http://img.youtube.com/vi/vxjv1j0OMdY/0.jpg)](https://youtu.be/vxjv1j0OMdY)
 
 #### Fine Tune
 After a lot of manual Coordinate descent, i.e. keeping all but one variables constant and changing still best performance, I was able to obtain the following parameters that were capable of passing all the scenarios.
@@ -326,15 +340,3 @@ with open('FigureEight.txt', 'w') as the_file:
 
 ### **Extra Challenge 2:** Improving trajectory generation with minimum snap trajectories.
 Next step is to generate trajectories using minimum snap optimization.
-  return cmd;
-  
-  
-  [![Scenario 1 - Intro](http://img.youtube.com/vi/g9MXIZB3w4s/0.jpg)](https://youtu.be/g9MXIZB3w4s)
-  
-  [![Scenario 2 - Attitude Control](http://img.youtube.com/vi/MuD2dLZcdU4/0.jpg)](https://youtu.be/MuD2dLZcdU4)
-  
-  [![Scenario 3 - Position Control](http://img.youtube.com/vi/I3tlVPEPmEk/0.jpg)](https://youtu.be/I3tlVPEPmEk)
-  
-  [![Scenario 4 - Nonidealities](http://img.youtube.com/vi/IkP6tFNcI6Q/0.jpg)](https://youtu.be/IkP6tFNcI6Q)
-  
-  [![Scenario 5 - Trajectory Following](http://img.youtube.com/vi/vxjv1j0OMdY/0.jpg)](https://youtu.be/vxjv1j0OMdY)

@@ -327,3 +327,14 @@ with open('FigureEight.txt', 'w') as the_file:
 ### **Extra Challenge 2:** Improving trajectory generation with minimum snap trajectories.
 Next step is to generate trajectories using minimum snap optimization.
   return cmd;
+  
+  
+  [![Scenario 1 - Intro](http://img.youtube.com/vi/g9MXIZB3w4s/0.jpg)](https://youtu.be/g9MXIZB3w4s)
+  
+  [![Scenario 2 - Attitude Control](http://img.youtube.com/vi/MuD2dLZcdU4/0.jpg)](https://youtu.be/MuD2dLZcdU4)
+  
+  [![Scenario 3 - Position Control](http://img.youtube.com/vi/I3tlVPEPmEk/0.jpg)](https://youtu.be/I3tlVPEPmEk)
+  
+  [![Scenario 4 - Nonidealities](http://img.youtube.com/vi/IkP6tFNcI6Q/0.jpg)](https://youtu.be/IkP6tFNcI6Q)
+  
+  [![Scenario 5 - Trajectory Following](http://img.youtube.com/vi/vxjv1j0OMdY/0.jpg)](https://youtu.be/vxjv1j0OMdY)
